@@ -1,6 +1,7 @@
 """End-to-end smoke test: drive the stdio server with the official MCP client."""
 import asyncio
 import json
+import os
 import sys
 
 from mcp import ClientSession, StdioServerParameters
@@ -8,8 +9,11 @@ from mcp.client.stdio import stdio_client
 
 
 async def main() -> int:
-    params = StdioServerParameters(command=sys.executable, args=["-m", "soccer_mcp.server"],
-                                   env={"SOCCER_MCP_CACHE": "/tmp/soccer-mcp-cache"})
+    # Die Umgebung durchreichen statt sie zu ersetzen: sonst erreicht ein Aufruf wie
+    # SOCCER_MCP_PLUGINS=… niemals den Server, und der Plugin-Hook lässt sich hier nicht prüfen
+    # (genau daran scheiterte der erste E2E-Lauf: 7 statt 10 Tools, ohne Fehlermeldung).
+    env = {**os.environ, "SOCCER_MCP_CACHE": os.environ.get("SOCCER_MCP_CACHE", "/tmp/soccer-mcp-cache")}
+    params = StdioServerParameters(command=sys.executable, args=["-m", "soccer_mcp.server"], env=env)
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             init = await session.initialize()

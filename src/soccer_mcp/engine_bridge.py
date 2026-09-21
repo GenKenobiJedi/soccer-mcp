@@ -1,4 +1,4 @@
-"""Optional bridge to a local analysis engine (e.g. /root/soccer/engine).
+"""Optional bridge to a local analysis engine (e.g. /opt/your-engine).
 
 Off unless SOCCER_ENGINE_PATH points at an importable engine directory. The public tools never
 depend on it: they use free data (ESPN day scoreboard) and self-contained odds arithmetic only,
