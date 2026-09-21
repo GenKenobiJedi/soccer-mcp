@@ -59,6 +59,19 @@ With Docker:
 }
 ```
 
+## Private tools (premium tier)
+
+The public package stays keyless and free. A private deployment attaches its own tools — paid feeds,
+sharp lines, model blending — through a plugin hook, so one server exposes both tiers:
+
+```bash
+SOCCER_MCP_PLUGINS=soccer_engine.mcp_tools,/opt/private/pro_tools.py soccer-mcp
+```
+
+Each plugin is a module (dotted path or file path) with a `register(server)` function that adds tools to
+the same server. Nothing private enters this repository, and `engine_status()` reports what is loaded.
+`SOCCER_ENGINE_PATH` optionally points at a private engine directory to bridge into.
+
 ## Environment
 
 | Variable | Default | Meaning |

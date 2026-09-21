@@ -17,7 +17,7 @@ except ImportError:                                         # mcp 1.x
     from mcp.server.fastmcp import FastMCP as _MCPServer
 
 from . import __version__
-from . import engine_bridge, math as odds_math, settlement, sources
+from . import engine_bridge, math as odds_math, plugins, settlement, sources
 
 mcp = _MCPServer(
     "soccer-mcp",
@@ -181,8 +181,12 @@ def parlay_math(legs: list[dict]) -> str:
 
 @mcp.tool()
 def engine_status() -> str:
-    """Report whether the optional private analysis engine is wired up (operator deployments only)."""
-    return _json(engine_bridge.available())
+    """Report whether the optional private analysis engine and private plugins are wired up."""
+    return _json({"engine": engine_bridge.available(), "plugins": LOADED_PLUGINS})
+
+
+# Private tools attach here: see plugins.py. Empty in the public deployment.
+LOADED_PLUGINS: list[str] = plugins.load(mcp)
 
 
 def main() -> None:
