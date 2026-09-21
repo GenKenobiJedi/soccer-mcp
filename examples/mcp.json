@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "soccer": {
+      "command": "uvx",
+      "args": ["soccer-mcp"],
+      "env": {
+        "SOCCER_MCP_CACHE": "/tmp/soccer-mcp-cache"
+      }
+    }
+  }
+}

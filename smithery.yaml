@@ -1,0 +1,15 @@
+# Listing metadata for MCP registries (Smithery-style).
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      cacheDir:
+        type: string
+        description: Where to cache per-day scoreboards
+        default: /tmp/soccer-mcp-cache
+  commandFunction: |-
+    (config) => ({ command: 'uvx', args: ['soccer-mcp'],
+                   env: { SOCCER_MCP_CACHE: config.cacheDir || '/tmp/soccer-mcp-cache' } })
+build:
+  dockerBuildPath: .
