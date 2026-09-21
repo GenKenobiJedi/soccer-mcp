@@ -16,10 +16,25 @@ quick scripts get wrong.
 | `get_fixtures(date, league?, only_finished?)` | Every football match on a day, all competitions, with scores once played |
 | `get_results(date, league?)` | Finished matches with final score — the input for settling |
 | `settle_picks(picks, date?)` | Settle a list of picks against real scorelines: per-pick result, hit rate, PnL, ROI |
-| `devig_market(prices)` | Strip the bookmaker margin and return the market's own probabilities |
-| `evaluate_price(probability, odds, margin_pct?, kelly_fraction?)` | Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict |
+| `devig_market(prices, method?)` | Strip the bookmaker margin and return the market's own probabilities (power method by default) |
+| `evaluate_price(probability, odds, margin_pct?, kelly_fraction?, tax_pct?)` | Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict |
 | `parlay_math(legs)` | Combined odds/EV of an accumulator and how fast the edge decays per leg |
 | `engine_status()` | Whether the optional private engine bridge is wired up |
+
+## Arithmetic conventions
+
+* **De-vigging uses the power method** (`p_i = (1/o_i)^k`, `Σp_i = 1`), not a proportional split of
+  the overround. Proportional de-vigging spreads the margin evenly and therefore overstates outsiders:
+  on `[1.80, 3.50, 4.20]` the two methods differ by **1.5 percentage points** on the 4.20 — more than
+  half of a typical 2 % value threshold. `devig_market(prices, method="proportional")` still returns
+  the old numbers for comparison.
+* **Bookmaker tax is a parameter, not an assumption**: `tax_pct` (Germany: 5.3 % at books that pass it
+  on) comes off the payout, so it lowers `ev`, raises `minimum_odds` and shrinks the Kelly stake. All
+  three arithmetic tools take it; default 0.
+* **Settlement names** are historic: `1X2` means the **home win**, `2X2` the away win and `DC` home or
+  draw. `X` (draw), `X2` (away or draw) and `12` (no draw) are also accepted, and so are the short
+  codes another engine writes (`1`, `2`, `1X`, `12`, …) — they map onto the same markets, so a pick
+  written elsewhere still settles instead of silently falling through.
 
 ## Install
 

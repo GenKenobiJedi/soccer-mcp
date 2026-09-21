@@ -9,7 +9,15 @@ from __future__ import annotations
 MARKETS = {
     "O1.0AH", "O1.5", "O2.0AH", "O2.25AH", "O2.5", "O2.75AH", "O3.0AH", "O3.5",
     "U1.5", "U2.0AH", "U2.25AH", "U2.5", "U2.75AH", "BTTS", "1X2", "2X2", "DC",
+    "X", "X2", "12",
 }
+
+# Die Namen oben sind gewachsen und teils irreführend: "1X2" ist der **Heimsieg**, "2X2" der
+# Auswärtssieg, "DC" Heim oder Unentschieden. Wer aus der Engine kommt, schreibt "1", "2", "1X" —
+# dieselben Märkte, andere Codes. Ohne diese Abbildung wird ein Tipp des einen Servers vom anderen
+# stillschweigend nicht abgerechnet.
+ALIASES = {"1": "1X2", "2": "2X2", "1X": "DC", "X2": "X2", "12": "12", "X": "X", "HOME": "1X2",
+           "AWAY": "2X2", "DRAW": "X"}
 
 
 def _ou(total: int, line: float, over: bool, win: float) -> tuple[str, float]:
@@ -41,7 +49,7 @@ def outcome(market: str | None, home_score, away_score, odds: float | None) -> d
     """{'result', 'profit', 'line'} for one unit staked, or None when inputs are missing."""
     if not market or home_score is None or away_score is None or odds is None:
         return None
-    market = market.upper().replace(" ", "")
+    market = ALIASES.get(market.upper().replace(" ", ""), market.upper().replace(" ", ""))
     try:
         hs, as_ = int(home_score), int(away_score)
     except (TypeError, ValueError):
@@ -61,6 +69,12 @@ def outcome(market: str | None, home_score, away_score, odds: float | None) -> d
         result, profit = ("win", win) if as_ > hs else ("loss", -1.0)
     elif market == "DC":
         result, profit = ("win", win) if hs >= as_ else ("loss", -1.0)
+    elif market == "X":
+        result, profit = ("win", win) if hs == as_ else ("loss", -1.0)
+    elif market == "X2":
+        result, profit = ("win", win) if as_ >= hs else ("loss", -1.0)
+    elif market == "12":
+        result, profit = ("win", win) if hs != as_ else ("loss", -1.0)
     else:
         return None
     return {"result": result, "profit": round(profit, 3), "total_goals": total}

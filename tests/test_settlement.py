@@ -38,3 +38,24 @@ def test_missing_inputs_return_none():
     assert settlement.outcome("O2.5", None, 1, 1.5) is None
     assert settlement.outcome(None, 1, 1, 1.5) is None
     assert settlement.outcome("O2.5", 1, 1, None) is None
+
+
+def test_engine_codes_settle_the_same_market():
+    """Die Engine schreibt 1/X/2/1X/12 — dieselben Märkte, andere Codes."""
+    assert settlement.outcome("1", 2, 0, 1.6)["result"] == settlement.outcome("1X2", 2, 0, 1.6)["result"]
+    assert settlement.outcome("2", 0, 2, 2.4)["result"] == settlement.outcome("2X2", 0, 2, 2.4)["result"]
+    assert settlement.outcome("1X", 1, 1, 1.3)["result"] == settlement.outcome("DC", 1, 1, 1.3)["result"]
+    assert settlement.outcome("1", 0, 0, 1.6)["result"] == "loss"
+
+
+def test_draw_away_or_draw_and_no_draw():
+    assert settlement.outcome("X", 1, 1, 3.4)["result"] == "win"
+    assert settlement.outcome("X", 1, 0, 3.4)["result"] == "loss"
+    assert settlement.outcome("X2", 0, 1, 1.5)["result"] == "win"
+    assert settlement.outcome("X2", 1, 0, 1.5)["result"] == "loss"
+    assert settlement.outcome("12", 1, 0, 1.4)["result"] == "win"
+    assert settlement.outcome("12", 1, 1, 1.4)["result"] == "loss"
+
+
+def test_market_list_covers_the_engine_vocabulary():
+    assert {"X", "X2", "12"} <= settlement.MARKETS

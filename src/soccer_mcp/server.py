@@ -186,21 +186,29 @@ def settle_picks(picks: list[dict], date: str | None = None) -> str:
 
 
 @mcp.tool()
-def devig_market(prices: list[float]) -> str:
+def devig_market(prices: list[float], method: str = "power") -> str:
     """Strip the bookmaker margin from one market's prices and return the market's own probabilities.
+
+    Uses the **power method**, which loads the margin onto the longshots the way bookmakers do —
+    proportional de-vigging (`method="proportional"`) spreads it evenly and overstates them by
+    around 1.5 percentage points on an 4.20 outsider.
 
     Args:
         prices: the decimal prices of all outcomes of the same market, e.g. [1.75, 3.6, 4.4] for 1X2
+        method: "power" (default) or "proportional"
     """
     if not isinstance(prices, list) or len(prices) < 2:
         return _error("prices needs at least two prices of the same market, e.g. [1.75, 3.6, 4.4]")
     if not all(_valid_price(p) for p in prices):
         return _error("every price must be a decimal price above 1.0", got=prices)
-    return _json(odds_math.devig(prices))
+    if method not in ("power", "proportional"):
+        return _error("method must be 'power' or 'proportional'", got=method)
+    return _json(odds_math.devig(prices, method))
 
 
 @mcp.tool()
-def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0, kelly_fraction: float = 0.25) -> str:
+def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0,
+                   kelly_fraction: float = 0.25, tax_pct: float = 0.0) -> str:
     """Judge a price against your own probability: fair odds, EV, minimum odds and a scaled Kelly stake.
 
     Args:
@@ -208,6 +216,8 @@ def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0, kel
         odds: the decimal price on offer, e.g. 1.90
         margin_pct: how much better than fair a price must be before you take it
         kelly_fraction: stake scaling; 0.25 means quarter Kelly
+        tax_pct: share of the stake the book passes on (Germany: 0.053) — it comes off the payout,
+            so it raises the minimum price and lowers the stake
     """
     if not _valid_probability(probability):
         return _error("probability must be between 0 and 1 (0.55, not 55)", got=probability)
@@ -215,9 +225,9 @@ def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0, kel
         return _error("odds must be a decimal price above 1.0", got=odds)
     if not isinstance(kelly_fraction, (int, float)) or not 0 < float(kelly_fraction) <= 1:
         return _error("kelly_fraction must be between 0 (exclusive) and 1, e.g. 0.25", got=kelly_fraction)
-    result = odds_math.ev(probability, odds)
-    result["minimum_odds"] = odds_math.minimum_odds(probability, margin_pct)
-    result["stake"] = odds_math.kelly(probability, odds, kelly_fraction)
+    result = odds_math.ev(probability, odds, tax_pct)
+    result["minimum_odds"] = odds_math.minimum_odds(probability, margin_pct, tax_pct)
+    result["stake"] = odds_math.kelly(probability, odds, kelly_fraction, tax_pct)
     result["take_it"] = odds >= result["minimum_odds"]["minimum_odds"]
     return _json(result)
 

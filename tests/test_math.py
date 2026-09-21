@@ -45,3 +45,34 @@ def test_parlay_multiplies_and_shows_the_decay():
 def test_devig_needs_at_least_two_prices():
     with pytest.raises(ValueError):
         odds_math.devig([1.5])
+
+
+def test_devig_defaults_to_the_power_method():
+    """Wie in der Engine: proportional verteilt die Marge gleichmäßig und überschätzt Außenseiter."""
+    power = odds_math.devig([1.80, 3.50, 4.20])
+    prop = odds_math.devig([1.80, 3.50, 4.20], method="proportional")
+    assert power["method"] == "power"
+    assert power["fair_probabilities"][2] < prop["fair_probabilities"][2]
+    assert power["fair_probabilities"][0] > prop["fair_probabilities"][0]
+    assert pytest.approx(sum(power["fair_probabilities"]), abs=0.001) == 1.0
+    assert power["overround_pct"] == prop["overround_pct"]
+
+
+def test_devig_rejects_an_unknown_method():
+    with pytest.raises(ValueError):
+        odds_math.devig([1.8, 3.5], method="magic")
+
+
+def test_ev_applies_a_passed_on_tax():
+    net = odds_math.ev(0.40, 3.20, tax_pct=0.053)
+    assert pytest.approx(net["ev_per_unit"], abs=0.0001) == 0.40 * 3.20 * (1 - 0.053) - 1
+    assert net["tax_pct"] == 0.053
+    assert odds_math.ev(0.40, 3.20)["ev_per_unit"] > net["ev_per_unit"]
+
+
+def test_kelly_uses_net_odds_when_tax_is_passed_on():
+    gross = odds_math.kelly(0.55, 2.10)["scaled_kelly_pct"]
+    net = odds_math.kelly(0.55, 2.10, tax_pct=0.053)["scaled_kelly_pct"]
+    assert gross > net > 0
+    # Bei Quote 1.90 frisst die Steuer die Kante ganz: 0.55 * 1.90 * 0.947 < 1 → Kelly 0.
+    assert odds_math.kelly(0.55, 1.90, tax_pct=0.053)["scaled_kelly_pct"] == 0.0
