@@ -7,6 +7,7 @@ Plus an optional operator-only bridge to a private engine when SOCCER_ENGINE_PAT
 """
 from __future__ import annotations
 
+import datetime
 import json
 from typing import Any
 
@@ -35,6 +36,30 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=1)
 
 
+def _error(message: str, **extra: Any) -> str:
+    """Input problems come back as readable JSON, not as a stack trace.
+
+    Without this an agent that passes "tomorrow" instead of a date got an MCP "unexpected exception"
+    with the full Python traceback — useless to the caller and it leaks internals.
+    """
+    return _json({"error": message, **extra})
+
+
+def _valid_date(value: Any) -> str | None:
+    try:
+        return datetime.date.fromisoformat(str(value)).isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+def _valid_price(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and float(value) > 1.0
+
+
+def _valid_probability(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and 0.0 < float(value) < 1.0
+
+
 @mcp.tool()
 def get_fixtures(date: str, league: str | None = None, only_finished: bool = False) -> str:
     """All football fixtures of one day (YYYY-MM-DD) across every competition, with scores when played.
@@ -44,7 +69,9 @@ def get_fixtures(date: str, league: str | None = None, only_finished: bool = Fal
         league: optional case-insensitive substring filter on the competition name
         only_finished: only return matches with a final score
     """
-    events = sources.day_events(date)
+    if not (day := _valid_date(date)):
+        return _error("date must be YYYY-MM-DD, e.g. 2026-09-20", got=date)
+    events = sources.day_events(day)
     if league:
         needle = league.lower()
         events = [e for e in events if needle in (e.get("league") or "").lower()]
@@ -61,7 +88,9 @@ def get_results(date: str, league: str | None = None) -> str:
         date: ISO date, e.g. 2026-09-20
         league: optional substring filter on the competition name
     """
-    events = sources.day_events(date)
+    if not (day := _valid_date(date)):
+        return _error("date must be YYYY-MM-DD, e.g. 2026-09-20", got=date)
+    events = sources.day_events(day)
     out = [e for e in events if e.get("finished") and e.get("home_score") is not None]
     if league:
         needle = league.lower()
@@ -103,8 +132,22 @@ def settle_picks(picks: list[dict], date: str | None = None) -> str:
                     best, score = event, combined
         return (best, round(score, 3)) if best and score >= 0.6 else (None, round(score, 3))
 
+    if not isinstance(picks, list) or not picks:
+        return _error("picks must be a non-empty list of {home, away, market, odds[, date]}")
+    if date is not None and not _valid_date(date):
+        return _error("date must be YYYY-MM-DD, e.g. 2026-09-20", got=date)
+    supported = ", ".join(sorted(settlement.MARKETS))
     rows, staked, profit, wins = [], 0.0, 0.0, 0
     for pick in picks:
+        market = str(pick.get("market") or "").upper().replace(" ", "")
+        if market not in settlement.MARKETS:
+            # Vorher blieb ein unbekannter Markt stillschweigend "unsettled" — der Aufrufer erfuhr nie,
+            # dass "1" nicht existiert. Jetzt steht der Grund samt gültiger Liste in der Zeile.
+            rows.append({**pick, "error": f"unknown market '{pick.get('market')}' — supported: {supported}"})
+            continue
+        if not _valid_price(pick.get("odds")):
+            rows.append({**pick, "error": "odds must be a decimal price above 1.0"})
+            continue
         day = pick.get("date") or date
         if not day:
             rows.append({**pick, "error": "no date given for this pick"})
@@ -113,12 +156,12 @@ def settle_picks(picks: list[dict], date: str | None = None) -> str:
         if not event:
             rows.append({**pick, "error": "no matching fixture found", "match_confidence": confidence})
             continue
-        graded = settlement.outcome(pick.get("market"), event.get("home_score"), event.get("away_score"), pick.get("odds"))
+        graded = settlement.outcome(market, event.get("home_score"), event.get("away_score"), pick.get("odds"))
         row = {
             "fixture": f'{event["home"]} vs {event["away"]}',
             "league": event.get("league"), "kickoff": event.get("kickoff"),
             "score": f'{event["home_score"]}:{event["away_score"]}',
-            "market": pick.get("market"), "odds": pick.get("odds"),
+            "market": market, "odds": pick.get("odds"),
             "match_confidence": confidence,
         }
         if graded:
@@ -149,6 +192,10 @@ def devig_market(prices: list[float]) -> str:
     Args:
         prices: the decimal prices of all outcomes of the same market, e.g. [1.75, 3.6, 4.4] for 1X2
     """
+    if not isinstance(prices, list) or len(prices) < 2:
+        return _error("prices needs at least two prices of the same market, e.g. [1.75, 3.6, 4.4]")
+    if not all(_valid_price(p) for p in prices):
+        return _error("every price must be a decimal price above 1.0", got=prices)
     return _json(odds_math.devig(prices))
 
 
@@ -162,6 +209,12 @@ def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0, kel
         margin_pct: how much better than fair a price must be before you take it
         kelly_fraction: stake scaling; 0.25 means quarter Kelly
     """
+    if not _valid_probability(probability):
+        return _error("probability must be between 0 and 1 (0.55, not 55)", got=probability)
+    if not _valid_price(odds):
+        return _error("odds must be a decimal price above 1.0", got=odds)
+    if not isinstance(kelly_fraction, (int, float)) or not 0 < float(kelly_fraction) <= 1:
+        return _error("kelly_fraction must be between 0 (exclusive) and 1, e.g. 0.25", got=kelly_fraction)
     result = odds_math.ev(probability, odds)
     result["minimum_odds"] = odds_math.minimum_odds(probability, margin_pct)
     result["stake"] = odds_math.kelly(probability, odds, kelly_fraction)
@@ -176,6 +229,11 @@ def parlay_math(legs: list[dict]) -> str:
     Args:
         legs: e.g. [{"probability": 0.6, "odds": 1.8}, {"probability": 0.5, "odds": 2.0}]
     """
+    if not isinstance(legs, list) or len(legs) < 2:
+        return _error("legs needs at least two legs, each {probability, odds}")
+    for i, leg in enumerate(legs, 1):
+        if not isinstance(leg, dict) or not _valid_price(leg.get("odds")) or not _valid_probability(leg.get("probability")):
+            return _error(f"leg {i} needs a decimal odds above 1.0 and a probability between 0 and 1", got=leg)
     return _json(odds_math.parlay(legs))
 
 
