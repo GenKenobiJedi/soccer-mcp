@@ -56,11 +56,20 @@ def devig(prices: list[float], method: str = "power") -> dict:
     }
 
 
+# An EV above this is not an opportunity but a broken price-to-line pairing: with a multi-line Asian
+# handicap or team-total feed the outcome ids are opaque, and a fair 0.985 for "away +3" met the price
+# 26.0 of another line — arithmetically +2461 %. Report it, never sell it as value.
+MAX_PLAUSIBLE_EV = 1.0
+
+
 def ev(probability: float, odds: float, tax_pct: float = 0.0) -> dict:
     """Expected value of a unit stake at the given price.
 
     `tax_pct` is the share of the stake the bookmaker passes on (Germany: 5.3 % at books that do
     not absorb it). It applies to the stake, so it scales the payout: p·o·(1−tax) − 1.
+
+    `plausible` is False when the edge exceeds `MAX_PLAUSIBLE_EV`: the arithmetic still holds, but the
+    inputs almost certainly do not describe the same line. Check the pairing before acting on it.
     """
     probability, odds = float(probability), float(odds)
     if not 0 < probability < 1:
@@ -69,6 +78,7 @@ def ev(probability: float, odds: float, tax_pct: float = 0.0) -> dict:
         raise ValueError("odds must be greater than 1.0")
     net_odds = odds * (1.0 - float(tax_pct))
     edge = probability * net_odds - 1.0
+    plausible = edge <= MAX_PLAUSIBLE_EV
     return {
         "probability": probability,
         "odds": odds,
@@ -77,6 +87,11 @@ def ev(probability: float, odds: float, tax_pct: float = 0.0) -> dict:
         "ev_pct": round(edge * 100, 2),
         "ev_per_unit": round(edge, 4),
         "value": edge > 0,
+        "plausible": plausible,
+        "note": (None if plausible else
+                 f"EV above {MAX_PLAUSIBLE_EV:.0%} — the price almost certainly belongs to another "
+                 "line (multi-line handicaps and team totals map by opaque outcome ids). Check the "
+                 "pairing before acting on it."),
         "minimum_odds_for_break_even": round(1.0 / (probability * (1.0 - float(tax_pct))), 3),
     }
 

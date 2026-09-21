@@ -23,6 +23,15 @@ quick scripts get wrong.
 
 ## Arithmetic conventions
 
+* **`ev()` reports `plausible`.** An edge above `MAX_PLAUSIBLE_EV` (+100 %) is arithmetically fine but
+  almost certainly a broken price-to-line pairing: multi-line Asian handicaps and team totals map by
+  opaque outcome ids, and a fair 98.5 % for "away +3" once met the price 26.0 of another line (+2461 %).
+  Check the pairing before acting on such a number — never present it as value.
+* **A fair value that equals your own model value is your model, not the market.** When the sharp line
+  does not quote a market (BTTS, over/under, team totals) and the number is filled from a goal model
+  fitted to 1X2, the two converge by construction. Treat it as model-based, and do not let a goal model
+  lead on BTTS or over/under, where it is measurably over-confident.
+
 * **De-vigging uses the power method** (`p_i = (1/o_i)^k`, `Σp_i = 1`), not a proportional split of
   the overround. Proportional de-vigging spreads the margin evenly and therefore overstates outsiders:
   on `[1.80, 3.50, 4.20]` the two methods differ by **1.5 percentage points** on the 4.20 — more than

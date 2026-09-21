@@ -76,3 +76,22 @@ def test_kelly_uses_net_odds_when_tax_is_passed_on():
     assert gross > net > 0
     # Bei Quote 1.90 frisst die Steuer die Kante ganz: 0.55 * 1.90 * 0.947 < 1 → Kelly 0.
     assert odds_math.kelly(0.55, 1.90, tax_pct=0.053)["scaled_kelly_pct"] == 0.0
+
+
+def test_absurd_edge_is_flagged_not_sold():
+    """An EV beyond +100 % is a mapping error, not an edge.
+
+    Measured 2026-09-21: a fair 0.985 for "away +3" met the price 26.0 of another line — arithmetically
+    +2461 %. Multi-line handicaps and team totals map by opaque outcome ids, so this happens quietly.
+    """
+    got = odds_math.ev(0.985, 26.0)
+    assert got["value"] is True            # arithmetically still positive
+    assert got["plausible"] is False       # but not believable
+    assert "another line" in got["note"]
+
+
+def test_normal_edge_is_plausible():
+    got = odds_math.ev(0.45, 2.40)
+    assert got["ev_pct"] > 0
+    assert got["plausible"] is True
+    assert got["note"] is None
