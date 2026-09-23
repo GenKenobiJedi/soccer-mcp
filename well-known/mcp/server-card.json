@@ -1,147 +1,374 @@
 {
   "serverInfo": {
     "name": "soccer-mcp",
-    "version": "1.0.0",
-    "title": "Soccer MCP \u2014 Fixtures, Settlement & Honest Odds Math"
+    "version": "0.3.0",
+    "title": "Soccer MCP — Fixtures, Settlement & Honest Odds Math"
   },
-  "description": "Football fixtures, results, de-vig odds math, Kelly/EV pricing, pick settlement, and Team-Mood news sentiment per club (LLM-scored, with sources). Sentiment scores are model-assisted (LLM per-factor deltas, freshness- and source-weighted) \u2014 mood indicators, not betting advice.",
+  "description": "Football fixtures, results, de-vig odds math, EV/Kelly pricing, pick settlement, and Team-Mood news sentiment per club with sourced factors. Read-only data and computation; sentiment is a mood indicator, not betting advice.",
   "authentication": {
     "required": false
   },
   "tools": [
     {
       "name": "get_fixtures",
-      "description": "Every football match on a day (YYYY-MM-DD), all competitions, with scores when played",
+      "description": "All football fixtures of one day (YYYY-MM-DD) across every competition, with scores when played.\n\n    Args:\n        date: ISO date, e.g. 2026-09-20\n        league: optional case-insensitive substring filter on the competition name\n        only_finished: only return matches with a final score\n    ",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "date": {
+            "description": "ISO date like 2026-09-20, the day to list fixtures for",
+            "title": "Date",
             "type": "string"
           },
           "league": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "optional case-insensitive substring filter on the competition name, e.g. 'bundesliga'",
+            "title": "League"
           },
           "only_finished": {
+            "default": false,
+            "description": "true = only matches with a final score",
+            "title": "Only Finished",
             "type": "boolean"
           }
         },
         "required": [
           "date"
-        ]
+        ],
+        "type": "object",
+        "title": "get_fixturesArguments"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "title": "get_fixturesOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "readOnlyHint": true,
+        "title": "Read data"
       }
     },
     {
       "name": "get_results",
-      "description": "Finished matches with final score \u2014 the input for settling bets",
+      "description": "Finished matches with final score for one day — the input for settling bets.\n\n    Args:\n        date: ISO date, e.g. 2026-09-20\n        league: optional substring filter on the competition name\n    ",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "date": {
+            "description": "ISO date like 2026-09-20, the day to read final scores for",
+            "title": "Date",
             "type": "string"
           },
           "league": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "optional case-insensitive substring filter on the competition name",
+            "title": "League"
           }
         },
         "required": [
           "date"
-        ]
+        ],
+        "type": "object",
+        "title": "get_resultsArguments"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Result",
+            "type": "array"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "title": "get_resultsOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "readOnlyHint": true,
+        "title": "Read data"
       }
     },
     {
       "name": "settle_picks",
-      "description": "Settle a list of picks against real scorelines: per-pick result, hit rate, PnL, ROI",
+      "description": "Settle a list of picks against the real scorelines and return per-pick results plus totals.\n\n    Each pick: {\"home\": \"...\", \"away\": \"...\", \"market\": \"O2.5\", \"odds\": 1.75, \"date\": \"2026-09-20\"}\n    Supported markets: O/U lines (1.0-4.5, quarter lines included), BTTS, 1X2, 2X2, DC.\n    Team names are matched fuzzily against the day's fixtures, so slight spelling differences are fine.\n\n    Args:\n        picks: list of picks, each needing home, away, market and odds\n        date: fallback ISO date when a pick carries no date of its own\n    ",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "picks": {
+            "description": "list of picks, each {home, away, market, odds[, date]}; market like 'O2.5', 'BTTS', '1X2'",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Picks",
             "type": "array"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "fallback ISO date for picks that carry no date of their own",
+            "title": "Date"
           }
-        }
+        },
+        "required": [
+          "picks"
+        ],
+        "type": "object",
+        "title": "settle_picksArguments"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "settle_picksDictOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "readOnlyHint": true,
+        "title": "Read data"
       }
     },
     {
       "name": "devig_market",
-      "description": "Strip the bookmaker margin (power method) and return fair probabilities",
+      "description": "Strip the bookmaker margin from one market's prices and return the market's own probabilities.\n\n    Uses the **power method**, which loads the margin onto the longshots the way bookmakers do —\n    proportional de-vigging (`method=\"proportional\"`) spreads it evenly and overstates them by\n    around 1.5 percentage points on an 4.20 outsider.\n\n    Args:\n        prices: the decimal prices of all outcomes of the same market, e.g. [1.75, 3.6, 4.4] for 1X2\n        method: \"power\" (default) or \"proportional\"\n    ",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "prices": {
+            "description": "all decimal prices of ONE market, e.g. [1.75, 3.6, 4.4] for 1X2",
+            "items": {
+              "type": "number"
+            },
+            "title": "Prices",
             "type": "array"
           },
           "method": {
+            "default": "power",
+            "description": "'power' (default, loads margin onto longshots) or 'proportional'",
+            "title": "Method",
             "type": "string"
           }
         },
         "required": [
           "prices"
-        ]
+        ],
+        "type": "object",
+        "title": "devig_marketArguments"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "devig_marketDictOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true,
+        "title": "Pure computation"
       }
     },
     {
       "name": "evaluate_price",
-      "description": "Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict",
+      "description": "Judge a price against your own probability: fair odds, EV, minimum odds and a scaled Kelly stake.\n\n    Args:\n        probability: your probability for the outcome, e.g. 0.55 (not 55)\n        odds: the decimal price on offer, e.g. 1.90\n        margin_pct: how much better than fair a price must be before you take it\n        kelly_fraction: stake scaling; 0.25 means quarter Kelly\n        tax_pct: share of the stake the book passes on (Germany: 0.053) — it comes off the payout,\n            so it raises the minimum price and lowers the stake\n    ",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "probability": {
+            "description": "your win probability for the outcome, 0.55 not 55",
+            "title": "Probability",
             "type": "number"
           },
           "odds": {
+            "description": "the decimal price on offer, e.g. 1.90",
+            "title": "Odds",
             "type": "number"
           },
           "margin_pct": {
+            "default": 3.0,
+            "description": "required edge in % before you take the price",
+            "title": "Margin Pct",
             "type": "number"
           },
           "kelly_fraction": {
+            "default": 0.25,
+            "description": "Kelly scaling, 0.25 = quarter Kelly",
+            "title": "Kelly Fraction",
             "type": "number"
           },
           "tax_pct": {
+            "default": 0.0,
+            "description": "share of stake the book passes on, e.g. 0.053 for Germany",
+            "title": "Tax Pct",
             "type": "number"
           }
         },
         "required": [
           "probability",
           "odds"
-        ]
+        ],
+        "type": "object",
+        "title": "evaluate_priceArguments"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "evaluate_priceDictOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true,
+        "title": "Pure computation"
       }
     },
     {
       "name": "parlay_math",
-      "description": "Combined odds/EV of an accumulator",
+      "description": "Combined odds and EV of an accumulator, plus how fast the edge decays with each leg.\n\n    Args:\n        legs: e.g. [{\"probability\": 0.6, \"odds\": 1.8}, {\"probability\": 0.5, \"odds\": 2.0}]\n    ",
       "inputSchema": {
-        "type": "object",
         "properties": {
           "legs": {
+            "description": "at least two legs, each {probability, odds} e.g. [{\"probability\":0.6,\"odds\":1.8}]",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Legs",
             "type": "array"
           }
-        }
-      }
-    },
-    {
-      "name": "get_team_sentiment",
-      "description": "Team-Mood cards: net news sentiment per club (-1..+1), level, trend, hard absences, factor list with sources",
-      "inputSchema": {
+        },
+        "required": [
+          "legs"
+        ],
         "type": "object",
-        "properties": {
-          "date": {
-            "type": "string"
-          },
-          "teams": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
+        "title": "parlay_mathArguments"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "parlay_mathDictOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true,
+        "title": "Pure computation"
       }
     },
     {
       "name": "engine_status",
-      "description": "Whether the optional private engine bridge is wired up",
+      "description": "Report whether the optional private analysis engine and private plugins are wired up.",
       "inputSchema": {
+        "properties": {},
         "type": "object",
-        "properties": {}
+        "title": "engine_statusArguments"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": true,
+        "title": "engine_statusDictOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "readOnlyHint": true,
+        "title": "Read data"
+      }
+    },
+    {
+      "name": "get_team_sentiment",
+      "description": "News-sentiment per team (krypto-style team mood): net score -1..+1, level\n        (rot/gelb/gruen), trend, hard absences, factor list with sources.\n\n        Args:\n            date: ISO date (YYYY-MM-DD). Default: today (UTC).\n            teams: optional list — return only teams whose name contains one of these\n                   substrings (case-insensitive), e.g. [\"Bayern\", \"Union\"].\n        ",
+      "inputSchema": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO date (YYYY-MM-DD); defaults to the current UTC date",
+            "title": "Date"
+          },
+          "teams": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional team-name substrings to filter results, case-insensitive; e.g. ['Barcelona', 'Bayern']",
+            "title": "Teams"
+          }
+        },
+        "type": "object",
+        "title": "get_team_sentimentArguments"
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "title": "get_team_sentimentOutput"
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "readOnlyHint": true,
+        "title": "Team mood and news sentiment"
       }
     }
   ],
