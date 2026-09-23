@@ -19,7 +19,7 @@ quick scripts get wrong.
 | `devig_market(prices, method?)` | Strip the bookmaker margin and return the market's own probabilities (power method by default) |
 | `evaluate_price(probability, odds, margin_pct?, kelly_fraction?, tax_pct?)` | Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict |
 | `parlay_math(legs)` | Combined odds/EV of an accumulator and how fast the edge decays per leg |
-| `get_team_sentiment(date?, teams?)` | **Team-Mood cards**: news sentiment per club — net score −1…+1, level (🔴/🟡/🟢), trend, hard absences, factor list with sources and sentiment deltas |
+| `get_team_sentiment(date?, teams?)` | **Team-Mood cards**: news sentiment per club — net score −1…+1, level (🔴/🟡/🟢), trend, hard absences, factor list with sources and sentiment deltas. Sentiment scores are model-assisted (LLM per-factor deltas) and weighted for freshness + source quality (unverified ×0.35); they are mood indicators, not betting advice. |
 | `engine_status()` | Whether the optional private engine bridge is wired up |
 
 ## Arithmetic conventions

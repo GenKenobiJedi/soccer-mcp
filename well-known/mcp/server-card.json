@@ -1,16 +1,149 @@
 {
-  "serverInfo": {"name": "soccer-mcp", "version": "1.0.0", "title": "Soccer MCP — Fixtures, Settlement & Honest Odds Math"},
-  "description": "Football fixtures, results, de-vig odds math, Kelly/EV pricing, pick settlement, and Team-Mood news sentiment per club (LLM-scored, with sources).",
-  "authentication": {"required": false},
+  "serverInfo": {
+    "name": "soccer-mcp",
+    "version": "1.0.0",
+    "title": "Soccer MCP \u2014 Fixtures, Settlement & Honest Odds Math"
+  },
+  "description": "Football fixtures, results, de-vig odds math, Kelly/EV pricing, pick settlement, and Team-Mood news sentiment per club (LLM-scored, with sources). Sentiment scores are model-assisted (LLM per-factor deltas, freshness- and source-weighted) \u2014 mood indicators, not betting advice.",
+  "authentication": {
+    "required": false
+  },
   "tools": [
-    {"name": "get_fixtures", "description": "Every football match on a day (YYYY-MM-DD), all competitions, with scores when played", "inputSchema": {"type": "object", "properties": {"date": {"type": "string"}, "league": {"type": "string"}, "only_finished": {"type": "boolean"}}, "required": ["date"]}},
-    {"name": "get_results", "description": "Finished matches with final score — the input for settling bets", "inputSchema": {"type": "object", "properties": {"date": {"type": "string"}, "league": {"type": "string"}}, "required": ["date"]}},
-    {"name": "settle_picks", "description": "Settle a list of picks against real scorelines: per-pick result, hit rate, PnL, ROI", "inputSchema": {"type": "object", "properties": {"picks": {"type": "array"}}}},
-    {"name": "devig_market", "description": "Strip the bookmaker margin (power method) and return fair probabilities", "inputSchema": {"type": "object", "properties": {"prices": {"type": "array"}, "method": {"type": "string"}}, "required": ["prices"]}},
-    {"name": "evaluate_price", "description": "Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict", "inputSchema": {"type": "object", "properties": {"probability": {"type": "number"}, "odds": {"type": "number"}, "margin_pct": {"type": "number"}, "kelly_fraction": {"type": "number"}, "tax_pct": {"type": "number"}}, "required": ["probability", "odds"]}},
-    {"name": "parlay_math", "description": "Combined odds/EV of an accumulator", "inputSchema": {"type": "object", "properties": {"legs": {"type": "array"}}}},
-    {"name": "get_team_sentiment", "description": "Team-Mood cards: net news sentiment per club (-1..+1), level, trend, hard absences, factor list with sources", "inputSchema": {"type": "object", "properties": {"date": {"type": "string"}, "teams": {"type": "array", "items": {"type": "string"}}}}},
-    {"name": "engine_status", "description": "Whether the optional private engine bridge is wired up", "inputSchema": {"type": "object", "properties": {}}}
+    {
+      "name": "get_fixtures",
+      "description": "Every football match on a day (YYYY-MM-DD), all competitions, with scores when played",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "league": {
+            "type": "string"
+          },
+          "only_finished": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date"
+        ]
+      }
+    },
+    {
+      "name": "get_results",
+      "description": "Finished matches with final score \u2014 the input for settling bets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "league": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ]
+      }
+    },
+    {
+      "name": "settle_picks",
+      "description": "Settle a list of picks against real scorelines: per-pick result, hit rate, PnL, ROI",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "picks": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "name": "devig_market",
+      "description": "Strip the bookmaker margin (power method) and return fair probabilities",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prices": {
+            "type": "array"
+          },
+          "method": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prices"
+        ]
+      }
+    },
+    {
+      "name": "evaluate_price",
+      "description": "Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "probability": {
+            "type": "number"
+          },
+          "odds": {
+            "type": "number"
+          },
+          "margin_pct": {
+            "type": "number"
+          },
+          "kelly_fraction": {
+            "type": "number"
+          },
+          "tax_pct": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "probability",
+          "odds"
+        ]
+      }
+    },
+    {
+      "name": "parlay_math",
+      "description": "Combined odds/EV of an accumulator",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "legs": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_team_sentiment",
+      "description": "Team-Mood cards: net news sentiment per club (-1..+1), level, trend, hard absences, factor list with sources",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "engine_status",
+      "description": "Whether the optional private engine bridge is wired up",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
   ],
   "resources": [],
   "prompts": []
