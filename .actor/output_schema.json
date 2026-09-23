@@ -1,0 +1,19 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "soccer tool result",
+    "description": "Each run executes exactly one soccer-mcp tool call and stores: the tool result as a dataset item, plus run metadata in the key-value store.",
+    "properties": {
+        "result": {
+            "type": "string",
+            "title": "Tool result (dataset item)",
+            "description": "One dataset item: {tool, arguments, ok, data, duration_ms, generated_at}. data holds the tool's JSON result (fixtures, settlement, fair odds, Kelly sizing etc.).",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        },
+        "runInfo": {
+            "type": "string",
+            "title": "Run info (OUTPUT key)",
+            "description": "JSON object with run metadata: tool, ok, duration, generated_at.",
+            "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/OUTPUT"
+        }
+    }
+}
