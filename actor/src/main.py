@@ -27,7 +27,7 @@ def main():
         if not callable(raw):
             raise RuntimeError(f"tool {tool!r} not found or not callable")
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         try:
             result = raw(**args) if args else raw()
             ok = True
@@ -39,10 +39,24 @@ def main():
             "arguments": args,
             "ok": ok,
             "data": result,
-            "duration_ms": int((time.time() - t0) * 1000),
+            "duration_ms": int((time.perf_counter() - t0) * 1000),
             "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         }
         await Actor.push_data([row])
+        # Run-Info in den KeyValue-Store (OUTPUT record) — Pflicht laut output_schema.json
+        try:
+            await Actor.set_value(
+                "OUTPUT",
+                {
+                    "tool": tool,
+                    "arguments": args,
+                    "ok": ok,
+                    "duration_ms": row["duration_ms"],
+                    "generated_at": row["generated_at"],
+                },
+            )
+        except Exception:
+            pass
         if ok:
             try:
                 await Actor.charge(event_name="tool-call", event_count=1)
