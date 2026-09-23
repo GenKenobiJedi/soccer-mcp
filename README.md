@@ -155,3 +155,15 @@ Works on both MCP SDK generations: the server imports `MCPServer` (v2) and falls
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Distribution
+
+| Channel | Link |
+|---|---|
+| Smithery registry | [smithery.ai/servers/burhan-hayber/soccer-mcp](https://smithery.ai/servers/burhan-hayber/soccer-mcp) |
+| MCP gateway URL | `https://mcp.smithery.ai/burhan-hayber/soccer-mcp` (Bearer Smithery key) |
+| Self-host (public, key-free) | `https://vmd194739.contaboserver.net/mcp/soccer/mcp` |
+| Apify (PPE, pay-per-call) | https://apify.com/genkenobi/soccer-fixtures-odds-math |
+
+Install via Smithery clients: `npx -y @smithery/cli@latest install burhan-hayber/soccer-mcp --client claude`
+
