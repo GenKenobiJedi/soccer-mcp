@@ -1,0 +1,66 @@
+{
+  "actorSpecification": 1,
+  "name": "soccer-fixtures-odds-math",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../actor/Dockerfile",
+  "title": "Soccer Fixtures, Settlement & Odds Math (MCP tools as API)",
+  "description": "One-call soccer toolkit: fixtures and results for any day (all comps), bet settlement vs real scorelines, de-vig (power), EV/minimum odds/Kelly pricing, parlay math. No API key. Each run executes one tool call, JSON to dataset.",
+  "minMemoryMbytes": 128,
+  "maxMemoryMbytes": 512,
+  "defaultMemoryMbytes": 256,
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "views": {
+        "overview": {
+          "title": "Tool result",
+          "transformation": {
+            "fields": [
+              "tool",
+              "arguments",
+              "ok",
+              "data",
+              "duration_ms",
+              "generated_at"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "input": {
+    "title": "Tool call",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+      "tool": {
+        "title": "Tool",
+        "type": "string",
+        "enum": [
+          "get_fixtures",
+          "get_results",
+          "settle_picks",
+          "devig_market",
+          "evaluate_price",
+          "parlay_math",
+          "engine_status"
+        ],
+        "default": "get_fixtures",
+        "description": "Which soccer-mcp tool to run"
+      },
+      "arguments": {
+        "title": "Arguments (JSON object of tool kwargs)",
+        "type": "object",
+        "editor": "json",
+        "default": {
+          "date": "2099-01-01"
+        },
+        "description": "Tool kwargs: get_fixtures/get_results {date, league?}, settle_picks {picks:[...], date?}, devig_market {prices:[...]}, evaluate_price {probability, odds, margin_pct?, kelly_fraction?}, parlay_math {legs:[...]} "
+      }
+    },
+    "required": [
+      "tool"
+    ]
+  }
+}
