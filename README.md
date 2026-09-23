@@ -3,6 +3,10 @@
 An MCP server that gives AI agents **football fixtures, real results, bet settlement and honest odds
 arithmetic** — one day, every competition, no API key.
 
+**Live on Apify:** [soccer-fixtures-odds-math](https://apify.com/genkenobi/soccer-fixtures-odds-math) (pay-per-call) ·
+**On Smithery:** [soccer-mcp](https://smithery.ai/servers/burhan-hayber/soccer-mcp) ·
+**Videos & demos on YouTube:** [TorAlarm](https://www.youtube.com/@TorAlarm)
+
 Most football MCP servers wrap a paid data API and stop at "here is a list of matches". This one
 ships the part that is usually missing: turning a price into a verdict. It de-vigs a market, compares
 your probability against the offered odds, names the minimum price worth taking, sizes the stake and
