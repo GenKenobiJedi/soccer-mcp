@@ -13,6 +13,10 @@ import datetime as dt
 import json
 import os
 import urllib.request
+from typing import Annotated
+
+from pydantic import Field
+from mcp.types import ToolAnnotations
 
 
 def _json_err(msg: str) -> str:
@@ -23,8 +27,16 @@ def _json_err(msg: str) -> str:
 def register(server) -> None:
     import soccer_mcp.server as _srv  # noqa: F401  (Attribut-Alias für den Actor-Dispatcher)
 
-    @server.tool()
-    def get_team_sentiment(date: str | None = None, teams: list[str] | None = None) -> str:
+    @server.tool(annotations=ToolAnnotations(
+        title="Team mood and news sentiment",
+        read_only_hint=True,
+        destructive_hint=False,
+        idempotent_hint=False,
+    ))
+    def get_team_sentiment(
+        date: Annotated[str | None, Field(description="Optional ISO date (YYYY-MM-DD); defaults to the current UTC date")] = None,
+        teams: Annotated[list[str] | None, Field(description="Optional team-name substrings to filter results, case-insensitive; e.g. ['Barcelona', 'Bayern']")] = None,
+    ) -> str:
         """News-sentiment per team (krypto-style team mood): net score -1..+1, level
         (rot/gelb/gruen), trend, hard absences, factor list with sources.
 
