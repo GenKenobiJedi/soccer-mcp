@@ -5,7 +5,7 @@
   "buildTag": "latest",
   "dockerfile": "../actor/Dockerfile",
   "title": "Soccer Fixtures, Settlement & Odds Math (MCP tools as API)",
-  "description": "One-call soccer toolkit: fixtures and results for any day (all comps), bet settlement vs real scorelines, de-vig (power), EV/minimum odds/Kelly pricing, parlay math. No API key. Each run executes one tool call, JSON to dataset.",
+  "description": "One-call soccer toolkit: fixtures and results for any day (all comps), bet settlement vs real scorelines, de-vig (power), EV/minimum odds/Kelly pricing, parlay math, plus Team-Mood news sentiment per club (LLM-scored, crypto-style). No API key. Each run executes one tool call, JSON to dataset.",
   "minMemoryMbytes": 128,
   "maxMemoryMbytes": 512,
   "defaultMemoryMbytes": 256,
@@ -44,7 +44,8 @@
           "devig_market",
           "evaluate_price",
           "parlay_math",
-          "engine_status"
+          "engine_status",
+          "get_team_sentiment"
         ],
         "default": "get_fixtures",
         "description": "Which soccer-mcp tool to run"
@@ -56,12 +57,16 @@
         "default": {
           "date": "2099-01-01"
         },
-        "description": "Tool kwargs: get_fixtures/get_results {date, league?}, settle_picks {picks:[...], date?}, devig_market {prices:[...]}, evaluate_price {probability, odds, margin_pct?, kelly_fraction?}, parlay_math {legs:[...]} "
+        "description": "Tool kwargs: get_fixtures/get_results {date, league?}, settle_picks {picks:[...], date?}, devig_market {prices:[...]}, evaluate_price {probability, odds, margin_pct?, kelly_fraction?}, parlay_math {legs:[...]}, get_team_sentiment {date?, teams?: [\"Bayern\", \"Union\"]} — Team-Mood cards (news sentiment per team)"
       }
     },
     "required": [
       "tool"
     ]
   },
-  "output": "./output_schema.json"
+  "output": "./output_schema.json",
+  "environmentVariables": {
+    "SOCCER_MCP_PLUGINS": "soccer_mcp.plugins_sentiment",
+    "SOCCER_SENTIMENT_URL": "https://vmd194739.contaboserver.net/soccer"
+  }
 }

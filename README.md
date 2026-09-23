@@ -19,6 +19,7 @@ quick scripts get wrong.
 | `devig_market(prices, method?)` | Strip the bookmaker margin and return the market's own probabilities (power method by default) |
 | `evaluate_price(probability, odds, margin_pct?, kelly_fraction?, tax_pct?)` | Fair odds, EV, minimum odds, scaled Kelly stake, take-it verdict |
 | `parlay_math(legs)` | Combined odds/EV of an accumulator and how fast the edge decays per leg |
+| `get_team_sentiment(date?, teams?)` | **Team-Mood cards**: news sentiment per club — net score −1…+1, level (🔴/🟡/🟢), trend, hard absences, factor list with sources and sentiment deltas |
 | `engine_status()` | Whether the optional private engine bridge is wired up |
 
 ## Arithmetic conventions
@@ -104,6 +105,9 @@ the same server. Nothing private enters this repository, and `engine_status()` r
 | `SOCCER_MCP_TTL` | `900` | Cache seconds for the current day |
 | `SOCCER_MCP_FINISHED_TTL` | `604800` | Cache seconds for past days (scores never change) |
 | `SOCCER_ENGINE_PATH` | unset | Operator-only: path to a private analysis engine to bridge into |
+| `SOCCER_MCP_PLUGINS` | unset | Comma-separated plugin modules (e.g. `soccer_mcp.plugins_sentiment`) |
+| `SOCCER_SENTIMENT_URL` | unset | Team-Mood backend base URL (e.g. `https://…/soccer`) — enables `get_team_sentiment` |
+| `SOCCER_SENTIMENT_TOKEN` | unset | Bearer token for the Team-Mood backend. On Apify: set this as a **secret** environment variable in the Console (Actor → Settings → Environment variables), not in the repo |
 
 ## Example
 

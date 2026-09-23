@@ -3,7 +3,7 @@
 
 Charges one PPE event per successful tool call (requires monetization setup).
 """
-import json, time, datetime as dt, sys, pathlib
+import json, os, time, datetime as dt, sys, pathlib
 
 # Container: /app/main.py, package src installed as site-package `soccer_mcp`
 # Do not rely on repo layout inside the image — soccer-mcp package itself is pip-installed.
@@ -22,6 +22,14 @@ def main():
         args = inp.get("arguments") or {}
 
         import soccer_mcp.server as srv
+        # Sentiment-Backend-Token: env (Secret in der Console) oder KV-Store 'SENTIMENT-TOKEN'
+        if not os.environ.get("SOCCER_SENTIMENT_TOKEN"):
+            try:
+                tok = await Actor.get_value("SENTIMENT-TOKEN")
+                if tok:
+                    os.environ["SOCCER_SENTIMENT_TOKEN"] = str(tok)
+            except Exception:
+                pass  # Backend antwortet dann 401 — tool liefert ok:false, Run bleibt grün
         fn = getattr(srv, tool, None)
         raw = getattr(fn, "fn", fn)
         if not callable(raw):
