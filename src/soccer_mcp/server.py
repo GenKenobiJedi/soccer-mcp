@@ -258,8 +258,15 @@ LOADED_PLUGINS: list[str] = plugins.load(mcp)
 
 
 def main() -> None:
-    """Entry point: speaks MCP over stdio."""
-    mcp.run()
+    """Entry point: MCP over stdio (default) or streamable HTTP via SOCCER_MCP_HTTP.
+    HTTP mode: SOCCER_MCP_HTTP=1 → serves at SOCCER_MCP_HTTP_HOST/PORT (default 127.0.0.1:8788)."""
+    import os
+    if os.environ.get("SOCCER_MCP_HTTP"):
+        host = os.environ.get("SOCCER_MCP_HTTP_HOST", "127.0.0.1")
+        port = int(os.environ.get("SOCCER_MCP_HTTP_PORT", "8788"))
+        mcp.run(transport="streamable-http", host=host, port=port)
+    else:
+        mcp.run()  # stdio — Claude Desktop / uvx clients
 
 
 if __name__ == "__main__":

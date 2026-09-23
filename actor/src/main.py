@@ -22,14 +22,18 @@ def main():
         args = inp.get("arguments") or {}
 
         import soccer_mcp.server as srv
-        # Sentiment-Backend-Token: env (Secret in der Console) oder KV-Store 'SENTIMENT-TOKEN'
+        # Sentiment-Backend-Token: input.token (Operator-Runs) > env (Console-Secret) > KV 'SENTIMENT-TOKEN'
         if not os.environ.get("SOCCER_SENTIMENT_TOKEN"):
-            try:
-                tok = await Actor.get_value("SENTIMENT-TOKEN")
-                if tok:
-                    os.environ["SOCCER_SENTIMENT_TOKEN"] = str(tok)
-            except Exception:
-                pass  # Backend antwortet dann 401 — tool liefert ok:false, Run bleibt grün
+            tok_input = str(inp.get("token") or "")
+            tok_kv = ""
+            if not tok_input:
+                try:
+                    tok_kv = str(await Actor.get_value("SENTIMENT-TOKEN") or "")
+                except Exception:
+                    pass
+            tok = tok_input or tok_kv
+            if tok:
+                os.environ["SOCCER_SENTIMENT_TOKEN"] = tok
         fn = getattr(srv, tool, None)
         raw = getattr(fn, "fn", fn)
         if not callable(raw):
