@@ -1,5 +1,5 @@
 {
-  "serverInfo": {"name": "soccer-mcp", "version": "1.0.0"},
+  "serverInfo": {"name": "soccer-mcp", "version": "1.0.0", "title": "Soccer MCP — Fixtures, Settlement & Honest Odds Math"},
   "description": "Football fixtures, results, de-vig odds math, Kelly/EV pricing, pick settlement, and Team-Mood news sentiment per club (LLM-scored, with sources).",
   "authentication": {"required": false},
   "tools": [
