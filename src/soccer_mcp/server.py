@@ -9,14 +9,17 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import Any
+from typing import Annotated, Any
 
 # The MCP Python SDK renamed FastMCP to MCPServer in v2. Support both so the server runs on either.
 try:                                                        # mcp >= 2
     from mcp.server import MCPServer as _MCPServer
+    from mcp.types import ToolAnnotations
 except ImportError:                                         # mcp 1.x
     from mcp.server.fastmcp import FastMCP as _MCPServer
+    from mcp.types import ToolAnnotations
 
+from pydantic import Field
 from . import __version__
 from . import engine_bridge, math as odds_math, plugins, settlement, sources
 
@@ -36,13 +39,13 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=1)
 
 
-def _error(message: str, **extra: Any) -> str:
-    """Input problems come back as readable JSON, not as a stack trace.
+def _error(message: str, **extra: Any) -> dict[str, Any]:
+    """Input problems come back as a readable dict, not as a stack trace.
 
     Without this an agent that passes "tomorrow" instead of a date got an MCP "unexpected exception"
     with the full Python traceback — useless to the caller and it leaks internals.
     """
-    return _json({"error": message, **extra})
+    return {"error": message, **extra}
 
 
 def _valid_date(value: Any) -> str | None:
@@ -60,8 +63,24 @@ def _valid_probability(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and 0.0 < float(value) < 1.0
 
 
-@mcp.tool()
-def get_fixtures(date: str, league: str | None = None, only_finished: bool = False) -> str:
+def _tool(annotations: ToolAnnotations | None = None, **kwargs: Any):
+    """Decorator um @mcp.tool() für dieSmithery-Gütekriterien:
+      * explizite ToolAnnotationen (readOnlyHint etc.),
+      * structured output via return-annotation.
+    Jedes Tool holt hier dieselbe Basiskonfiguration, statt siebenmal boilerplate."""
+    return mcp.tool(annotations=annotations, structured_output=True, **kwargs)
+
+
+ReadTool = ToolAnnotations(title="Read data", read_only_hint=True, destructive_hint=False, idempotent_hint=False)
+MathTool = ToolAnnotations(title="Pure computation", read_only_hint=True, destructive_hint=False, idempotent_hint=True)
+
+
+@_tool(ReadTool)
+def get_fixtures(
+    date: Annotated[str, Field(description="ISO date like 2026-09-20, the day to list fixtures for")],
+    league: Annotated[str | None, Field(description="optional case-insensitive substring filter on the competition name, e.g. 'bundesliga'")] = None,
+    only_finished: Annotated[bool, Field(description="true = only matches with a final score")] = False,
+) -> list[dict[str, Any]]:
     """All football fixtures of one day (YYYY-MM-DD) across every competition, with scores when played.
 
     Args:
@@ -77,11 +96,14 @@ def get_fixtures(date: str, league: str | None = None, only_finished: bool = Fal
         events = [e for e in events if needle in (e.get("league") or "").lower()]
     if only_finished:
         events = [e for e in events if e.get("finished")]
-    return _json(events)
+    return (events)
 
 
-@mcp.tool()
-def get_results(date: str, league: str | None = None) -> str:
+@_tool(ReadTool)
+def get_results(
+    date: Annotated[str, Field(description="ISO date like 2026-09-20, the day to read final scores for")],
+    league: Annotated[str | None, Field(description="optional case-insensitive substring filter on the competition name")] = None,
+) -> list[dict[str, Any]]:
     """Finished matches with final score for one day — the input for settling bets.
 
     Args:
@@ -95,11 +117,14 @@ def get_results(date: str, league: str | None = None) -> str:
     if league:
         needle = league.lower()
         out = [e for e in out if needle in (e.get("league") or "").lower()]
-    return _json(sorted(out, key=lambda e: (e.get("league") or "", e.get("home") or "")))
+    return (sorted(out, key=lambda e: (e.get("league") or "", e.get("home") or "")))
 
 
-@mcp.tool()
-def settle_picks(picks: list[dict], date: str | None = None) -> str:
+@_tool(ReadTool)
+def settle_picks(
+    picks: Annotated[list[dict], Field(description="list of picks, each {home, away, market, odds[, date]}; market like 'O2.5', 'BTTS', '1X2'")],
+    date: Annotated[str | None, Field(description="fallback ISO date for picks that carry no date of their own")] = None,
+) -> dict[str, Any]:
     """Settle a list of picks against the real scorelines and return per-pick results plus totals.
 
     Each pick: {"home": "...", "away": "...", "market": "O2.5", "odds": 1.75, "date": "2026-09-20"}
@@ -171,7 +196,7 @@ def settle_picks(picks: list[dict], date: str | None = None) -> str:
             wins += 1 if graded["result"] in ("win", "halfwin") else 0
         rows.append(row)
     settled = [r for r in rows if r.get("result")]
-    return _json({
+    return ({
         "picks": rows,
         "summary": {
             "picks": len(picks), "settled": len(settled), "unsettled": len(picks) - len(settled),
@@ -185,8 +210,11 @@ def settle_picks(picks: list[dict], date: str | None = None) -> str:
     })
 
 
-@mcp.tool()
-def devig_market(prices: list[float], method: str = "power") -> str:
+@_tool(MathTool)
+def devig_market(
+    prices: Annotated[list[float], Field(description="all decimal prices of ONE market, e.g. [1.75, 3.6, 4.4] for 1X2")],
+    method: Annotated[str, Field(description="'power' (default, loads margin onto longshots) or 'proportional'")] = "power",
+) -> dict[str, Any]:
     """Strip the bookmaker margin from one market's prices and return the market's own probabilities.
 
     Uses the **power method**, which loads the margin onto the longshots the way bookmakers do —
@@ -203,12 +231,17 @@ def devig_market(prices: list[float], method: str = "power") -> str:
         return _error("every price must be a decimal price above 1.0", got=prices)
     if method not in ("power", "proportional"):
         return _error("method must be 'power' or 'proportional'", got=method)
-    return _json(odds_math.devig(prices, method))
+    return (odds_math.devig(prices, method))
 
 
-@mcp.tool()
-def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0,
-                   kelly_fraction: float = 0.25, tax_pct: float = 0.0) -> str:
+@_tool(MathTool)
+def evaluate_price(
+    probability: Annotated[float, Field(description="your win probability for the outcome, 0.55 not 55")],
+    odds: Annotated[float, Field(description="the decimal price on offer, e.g. 1.90")],
+    margin_pct: Annotated[float, Field(description="required edge in % before you take the price")] = 3.0,
+    kelly_fraction: Annotated[float, Field(description="Kelly scaling, 0.25 = quarter Kelly")] = 0.25,
+    tax_pct: Annotated[float, Field(description="share of stake the book passes on, e.g. 0.053 for Germany")] = 0.0,
+) -> dict[str, Any]:
     """Judge a price against your own probability: fair odds, EV, minimum odds and a scaled Kelly stake.
 
     Args:
@@ -229,11 +262,13 @@ def evaluate_price(probability: float, odds: float, margin_pct: float = 3.0,
     result["minimum_odds"] = odds_math.minimum_odds(probability, margin_pct, tax_pct)
     result["stake"] = odds_math.kelly(probability, odds, kelly_fraction, tax_pct)
     result["take_it"] = odds >= result["minimum_odds"]["minimum_odds"]
-    return _json(result)
+    return (result)
 
 
-@mcp.tool()
-def parlay_math(legs: list[dict]) -> str:
+@_tool(MathTool)
+def parlay_math(
+    legs: Annotated[list[dict], Field(description="at least two legs, each {probability, odds} e.g. [{\"probability\":0.6,\"odds\":1.8}]")],
+) -> dict[str, Any]:
     """Combined odds and EV of an accumulator, plus how fast the edge decays with each leg.
 
     Args:
@@ -244,13 +279,13 @@ def parlay_math(legs: list[dict]) -> str:
     for i, leg in enumerate(legs, 1):
         if not isinstance(leg, dict) or not _valid_price(leg.get("odds")) or not _valid_probability(leg.get("probability")):
             return _error(f"leg {i} needs a decimal odds above 1.0 and a probability between 0 and 1", got=leg)
-    return _json(odds_math.parlay(legs))
+    return (odds_math.parlay(legs))
 
 
-@mcp.tool()
-def engine_status() -> str:
+@_tool(ReadTool)
+def engine_status() -> dict[str, Any]:
     """Report whether the optional private analysis engine and private plugins are wired up."""
-    return _json({"engine": engine_bridge.available(), "plugins": LOADED_PLUGINS})
+    return ({"engine": engine_bridge.available(), "plugins": LOADED_PLUGINS})
 
 
 # Private tools attach here: see plugins.py. Empty in the public deployment.
