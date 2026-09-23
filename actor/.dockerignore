@@ -1,0 +1,5 @@
+*.md
+actor/storage/
+actor/src/__pycache__/
+tests/
+examples/
