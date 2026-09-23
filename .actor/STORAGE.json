@@ -19,5 +19,18 @@
         ],
         "transform": null
     },
-    "keyValueStoreView": null
+    "keyValueStoreView": {
+        "title": "Run info",
+        "collections": [
+            {
+                "prefix": "OUTPUT",
+                "title": "Run output",
+                "columns": [
+                    {"raw": {"field": "key", "label": "Key", "format": "\n${item.key}\n"}},
+                    {"raw": {"field": "value", "label": "Value", "format": "\n${item.value}\n"}}
+                ],
+                "transform": null
+            }
+        ]
+    }
 }
