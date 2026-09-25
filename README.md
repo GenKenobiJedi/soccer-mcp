@@ -5,6 +5,7 @@ arithmetic** — one day, every competition, no API key.
 
 **Live on Apify:** [soccer-fixtures-odds-math](https://apify.com/genkenobi/soccer-fixtures-odds-math) (pay-per-call) ·
 **On Smithery:** [soccer-mcp](https://smithery.ai/servers/soccer/soccer-mcp) ·
+**Preview video (25 s):** [soccer-mcp in 25 seconds — real MCP calls](https://youtu.be/OZN5YrTOXTw) ·
 **Videos & demos on YouTube:** [TorAlarm](https://www.youtube.com/@TorAlarm)
 
 Most football MCP servers wrap a paid data API and stop at "here is a list of matches". This one
