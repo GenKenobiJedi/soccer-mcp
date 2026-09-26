@@ -25,6 +25,14 @@ async def main() -> int:
             print("tools:", len(tools.tools), [t.name for t in tools.tools])
 
             def payload(result):
+                """mcp v2 + structured output: the object lives in structuredContent; a list-returning
+                tool wraps it as {"result": [...]} and streams one text block per item. Prefer the
+                structured copy, fall back to the text block (older protocol versions)."""
+                sc = getattr(result, "structured_content", None) or getattr(result, "structuredContent", None)
+                if sc is not None:
+                    return sc["result"] if isinstance(sc, dict) and list(sc) == ["result"] else sc
+                if len(result.content) > 1:
+                    return [json.loads(block.text) for block in result.content]
                 return json.loads(result.content[0].text)
 
             res = await session.call_tool("get_results", {"date": "2026-09-20", "league": "Bundesliga"})

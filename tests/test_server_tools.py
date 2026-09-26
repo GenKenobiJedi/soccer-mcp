@@ -11,8 +11,10 @@ from unittest import mock
 from soccer_mcp import server
 
 
-def payload(text: str):
-    return json.loads(text)
+def payload(result):
+    """A direct call hands back the object (tools are registered with structured output);
+    over the wire it is JSON text. Accept both so the assertions test content, not transport."""
+    return json.loads(result) if isinstance(result, str) else result
 
 
 EVENT = {"date": "2026-09-20", "kickoff": "2026-09-20T15:00Z", "home": "RB Salzburg", "away": "SK Sturm Graz",
