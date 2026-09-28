@@ -114,6 +114,8 @@ the same server. Nothing private enters this repository, and `engine_status()` r
 | `SOCCER_SENTIMENT_URL` | unset | Team-Mood backend base URL (e.g. `https://…/soccer`) — enables `get_team_sentiment` |
 | `SOCCER_SENTIMENT_TOKEN` | unset | Bearer token for the Team-Mood backend. On Apify: set this as a **secret** environment variable in the Console (Actor → Settings → Environment variables), not in the repo |
 
+Apify environment variables are managed in the Console. Keep `environmentVariables` absent from `.actor/actor.json` so future CLI pushes preserve the backend secret and plugin settings.
+
 ## Example
 
 ```

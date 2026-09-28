@@ -64,9 +64,5 @@
       "tool"
     ]
   },
-  "output": "./output_schema.json",
-  "environmentVariables": {
-    "SOCCER_MCP_PLUGINS": "soccer_mcp.plugins_sentiment",
-    "SOCCER_SENTIMENT_URL": "https://vmd194739.contaboserver.net/soccer"
-  }
+  "output": "./output_schema.json"
 }
